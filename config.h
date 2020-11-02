@@ -5,21 +5,26 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Hack NF:pixelsize=17:antialias=true:autohint=true";
-static int borderpx = 3;
+static char *font = "Hack Nerd Font:pixelsize=15:antialias=true:autohint=true";
+/* Spare fonts */
+static char *font2[] = {
+    "JetBrains Mono Medium:pixelsize=15:antialias=true:autohint=true", // idk
+    "IPAGothic:pixelsize=15:antialias=true:autohint=true", // Japanese
+    "Symbola:pixelsize=15:antialias=true:autohint=true" // Unicode
+};
+
+static int borderpx = 2;
 
 /*
  * What program is execed by st depends of these precedence rules:
  * 1: program passed with -e
- * 2: scroll and/or utmp
+ * 2: utmp option
  * 3: SHELL environment variable
  * 4: value of shell in /etc/passwd
  * 5: value of shell in config.h
  */
-static char *shell = "/bin/zsh";
+static char *shell = "/bin/sh";
 char *utmp = NULL;
-/* scroll program: to enable use a string like "scroll" */
-char *scroll = NULL;
 char *stty_args = "stty raw pass8 nl -echo -iexten -cstopb 38400";
 
 /* identification sequence returned in DA and DECID */
@@ -43,18 +48,9 @@ static unsigned int tripleclicktimeout = 600;
 /* alt screens */
 int allowaltscreen = 1;
 
-/* allow certain non-interactive (insecure) window operations such as:
-   setting the clipboard text */
-int allowwindowops = 0;
-
-/*
- * draw latency range in ms - from new content/keypress/etc until drawing.
- * within this range, st draws when content stops arriving (idle). mostly it's
- * near minlatency, but it waits longer for slow updates to avoid partial draw.
- * low minlatency will tear/flicker more, as it can "detect" idle too early.
- */
-static double minlatency = 8;
-static double maxlatency = 33;
+/* frames per second st should at maximum draw to the screen */
+static unsigned int xfps = 120;
+static unsigned int actionfps = 30;
 
 /*
  * blinking timeout (set to 0 to disable blinking) for the terminal blinking
@@ -66,6 +62,18 @@ static unsigned int blinktimeout = 800;
  * thickness of underline and bar cursors
  */
 static unsigned int cursorthickness = 2;
+
+/*
+ * 1: render most of the lines/blocks characters without using the font for
+ *    perfect alignment between cells (U2500 - U259F except dashes/diagonals).
+ *    Bold affects lines thickness if boxdraw_bold is not 0. Italic is ignored.
+ * 0: disable (render all U25XX glyphs normally from the font).
+ */
+const int boxdraw = 0;
+const int boxdraw_bold = 0;
+
+/* braille (U28XX):  1: render as adjacent "pixels",  0: use font */
+const int boxdraw_braille = 0;
 
 /*
  * bell volume. It must be a value between -100 and 100. Use 0 for disabling
@@ -95,18 +103,9 @@ unsigned int tabspaces = 8;
 
 /* Terminal colors (16 first used in escape sequence) */
 static const char *colorname[] = {
-	/* 8 normal colors */
-	"#0F111A", //| black
-	"#D41919", //| red
-	"#5E97AF", //| cyan
-	"#E98567", //| orange
-	"#A574C3", //| magenta
-	"#57F199", //| bluegreen
-	"#505A7A", //| gray
-	"#F9FAFD", //| white
 
 	/* 8 bright colors */
-	"#45BABF", //| light green
+	"#5E97AF", //| light green
 	"#EC0101", //| light red
 	"#89DDFF", //| light cyan
 	"#FAC86A", //| light orange
@@ -115,22 +114,32 @@ static const char *colorname[] = {
 	"#B2B2CC", //| light gray
 	"#A4A4A4", //| gray
 
+	/* 8 normal colors */
+	"#45BABF", //| black
+	"#D41919", //| red
+	"#5E97AF", //| cyan
+	"#E98567", //| orange
+	"#A574C3", //| magenta
+	"#57F199", //| bluegreen
+	"#505A7A", //| gray
+	"#F9FAFD", //| white
+
+
 	[255] = 0,
 
 	/* more colors can be added after 255 to use with DefaultXX */
+	"#0F111A",
 	"#cccccc",
-	"#555555",
 };
-
 
 /*
  * Default colors (colorname index)
  * foreground, background, cursor, reverse cursor
  */
-unsigned int defaultfg = 7;
-unsigned int defaultbg = 0;
-static unsigned int defaultcs = 256;
-static unsigned int defaultrcs = 257;
+unsigned int defaultfg = 257;
+unsigned int defaultbg = 256;
+static unsigned int defaultcs = 257;
+static unsigned int defaultrcs = 256;
 
 /*
  * Default shape of cursor
@@ -161,44 +170,55 @@ static unsigned int mousebg = 0;
  */
 static unsigned int defaultattr = 11;
 
-/*
- * Force mouse select/shortcuts while mask is active (when MODE_MOUSE is set).
- * Note that if you want to use ShiftMask with selmasks, set this to an other
- * modifier, set to 0 to not use it.
- */
-static uint forcemousemod = ShiftMask;
+#define MODKEY Mod1Mask
+#define TERMMOD (ControlMask|ShiftMask)
 
 /*
  * Internal mouse shortcuts.
  * Beware that overloading Button1 will disable the selection.
  */
 static MouseShortcut mshortcuts[] = {
-	/* mask                 button   function        argument       release */
-	{ XK_ANY_MOD,           Button2, selpaste,       {.i = 0},      1 },
-	{ ShiftMask,            Button4, ttysend,        {.s = "\033[5;2~"} },
-	{ XK_ANY_MOD,           Button4, ttysend,        {.s = "\031"} },
-	{ ShiftMask,            Button5, ttysend,        {.s = "\033[6;2~"} },
-	{ XK_ANY_MOD,           Button5, ttysend,        {.s = "\005"} },
+	/* button               mask            string */
+	{ Button4,              XK_NO_MOD,      "\031" },
+	{ Button5,              XK_NO_MOD,      "\005" },
+};
+
+MouseKey mkeys[] = {
+	/* button               mask            function        argument */
+	{ Button4,              MODKEY,      kscrollup,      {.i =  1} },
+	{ Button5,              MODKEY,      kscrolldown,    {.i =  1} },
 };
 
 /* Internal keyboard shortcuts. */
-#define MODKEY Mod1Mask
-#define TERMMOD (ControlMask|ShiftMask)
-
 static Shortcut shortcuts[] = {
-	/* mask                 keysym          function        argument */
-	{ XK_ANY_MOD,           XK_Break,       sendbreak,      {.i =  0} },
-	{ ControlMask,          XK_Print,       toggleprinter,  {.i =  0} },
-	{ ShiftMask,            XK_Print,       printscreen,    {.i =  0} },
-	{ XK_ANY_MOD,           XK_Print,       printsel,       {.i =  0} },
-	{ TERMMOD,              XK_Prior,       zoom,           {.f = +1} },
-	{ TERMMOD,              XK_Next,        zoom,           {.f = -1} },
-	{ TERMMOD,              XK_Home,        zoomreset,      {.f =  0} },
-	{ TERMMOD,              XK_C,           clipcopy,       {.i =  0} },
-	{ TERMMOD,              XK_V,           clippaste,      {.i =  0} },
-	{ TERMMOD,              XK_Y,           selpaste,       {.i =  0} },
-	{ ShiftMask,            XK_Insert,      selpaste,       {.i =  0} },
-	{ TERMMOD,              XK_Num_Lock,    numlock,        {.i =  0} },
+	/* mask                 keysym              function        argument */
+	{ XK_ANY_MOD,           XK_Break,           sendbreak,      {.i =  0} },
+	{ ControlMask,          XK_Print,           toggleprinter,  {.i =  0} },
+	{ ShiftMask,            XK_Print,           printscreen,    {.i =  0} },
+	{ XK_ANY_MOD,           XK_Print,           printsel,       {.i =  0} },
+	{ TERMMOD,              XK_plus,            zoom,           {.f = +1} },
+	{ TERMMOD,              XK_underscore,      zoom,           {.f = -1} },
+	{ TERMMOD,              XK_BackSpace,       zoomreset,      {.f =  0} },
+	{ TERMMOD,              XK_C,               clipcopy,       {.i =  0} },
+	{ TERMMOD,              XK_V,               clippaste,      {.i =  0} },
+	{ MODKEY,               XK_Up,              kscrollup,      {.i =  1} },
+	{ MODKEY,               XK_Down,            kscrolldown,    {.i =  1} },
+	{ TERMMOD,              XK_k,               kscrollup,      {.i =  1} },
+	{ TERMMOD,              XK_j,               kscrolldown,    {.i =  1} },
+	{ TERMMOD,              XK_Y,               selpaste,       {.i =  0} },
+  	{ TERMMOD,              XK_u,               kscrollup,      {.i = -1} },
+	{ MODKEY,               XK_d,               kscrolldown,    {.i = -1} },
+  // Execute script
+  	{ TERMMOD,              XK_A,               kexecsh,        {.ca = "ls -lah"} },
+  	{ TERMMOD,              XK_B,               kexecsh,        {.ca = "bash"} },
+  	{ TERMMOD,              XK_Z,               kexecsh,        {.ca = "zsh"} },
+  	{ TERMMOD,              XK_P,               kexecsh,        {.ca = "python3"} },
+  	{ MODKEY,               XK_p,               kexecsh,        {.ca = "python2"} },
+  	{ TERMMOD,              XK_S,               kexecsh,        {.ca = "sh"} },
+  	{ TERMMOD,              XK_H,               kexecsh,        {.ca = "cat ~/.config/sh/man.md"} },
+
+//   // String mappings
+//   { ControlMask,          XK_slash,           kwrite,         {.ca = "gc"} }
 };
 
 /*
@@ -233,6 +253,13 @@ static KeySym mappedkeys[] = { -1 };
  * numlock (Mod2Mask) and keyboard layout (XK_SWITCH_MOD) are ignored.
  */
 static uint ignoremod = Mod2Mask|XK_SWITCH_MOD;
+
+/*
+ * Override mouse-select while mask is active (when MODE_MOUSE is set).
+ * Note that if you want to use ShiftMask with selmasks, set this to an other
+ * modifier, set to 0 to not use it.
+ */
+static uint forceselmod = ShiftMask;
 
 /*
  * This is the huge key array which defines all compatibility to the Linux

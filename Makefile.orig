@@ -50,11 +50,6 @@ install: st
 	chmod 644 $(DESTDIR)$(MANPREFIX)/man1/st.1
 	tic -sx st.info
 	@echo Please see the README file regarding the terminfo entry of st.
-man:
-	mkdir -p ~/.config/st/
-	cp ./man.md ~/.config/st/man.md
-	echo "alias sthelp='cat ~/.config/st/man.md'" >> ~/.zshrc
-	echo "alias sthelp='cat ~/.config/st/man.md'" >> ~/.bashrc
 
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/st
