@@ -4,7 +4,7 @@
 
 include config.mk
 
-SRC = st.c x.c boxdraw.c
+SRC = st.c x.c
 OBJ = $(SRC:.c=.o)
 
 all: options st
@@ -23,7 +23,6 @@ config.h:
 
 st.o: config.h st.h win.h
 x.o: arg.h config.h st.h win.h
-boxdraw.o: config.h st.h boxdraw_data.h
 
 $(OBJ): config.h config.mk
 
@@ -50,11 +49,6 @@ install: st
 	chmod 644 $(DESTDIR)$(MANPREFIX)/man1/st.1
 	tic -sx st.info
 	@echo Please see the README file regarding the terminfo entry of st.
-man:
-	mkdir -p ~/.config/st/
-	cp ./man.md ~/.config/st/man.md
-	echo "alias sthelp='cat ~/.config/st/man.md'" >> ~/.zshrc
-	echo "alias sthelp='cat ~/.config/st/man.md'" >> ~/.bashrc
 
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/st
