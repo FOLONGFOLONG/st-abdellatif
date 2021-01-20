@@ -5,8 +5,8 @@
  *
  * font: see http://freedesktop.org/software/fontconfig/fontconfig-user.html
  */
-static char *font = "Liberation Mono:pixelsize=12:antialias=true:autohint=true";
-static int borderpx = 2;
+static char *font = "Hack Nerd Font:pixelsize=12:antialias=true:autohint=true";
+static int borderpx = 5;
 
 /*
  * What program is execed by st depends of these precedence rules:
@@ -91,29 +91,29 @@ char *termname = "st-256color";
  *
  *	stty tabs
  */
-unsigned int tabspaces = 8;
+unsigned int tabspaces = 4;
 
 /* Terminal colors (16 first used in escape sequence) */
 static const char *colorname[] = {
 	/* 8 normal colors */
-	"black",
-	"red3",
-	"green3",
-	"yellow3",
-	"blue2",
-	"magenta3",
-	"cyan3",
-	"gray90",
+	"#090A0F",
+	"#D41919",
+	"#5E97AF",
+	"#FAC86A",
+	"#A574C3",
+	"#57F199",
+	"#505A7A",
+	"#E9E9E9",
 
 	/* 8 bright colors */
-	"gray50",
-	"red",
-	"green",
-	"yellow",
-	"#5c5cff",
-	"magenta",
-	"cyan",
-	"white",
+	"#198388",
+	"#EC0101",
+	"#89DDFF",
+	"#E98567",
+	"#B797CA",
+	"#A9FECD",
+	"#B2B2CC",
+	"#A4A4A4",
 
 	[255] = 0,
 
