@@ -55,3 +55,9 @@ uninstall:
 	rm -f $(DESTDIR)$(MANPREFIX)/man1/st.1
 
 .PHONY: all options clean dist install uninstall
+
+run:
+	make clean
+	make
+	./st
+
