@@ -1,3 +1,5 @@
+# modified by abdellatif-dev
+
 st - simple terminal
 --------------------
 st is a simple terminal emulator for X which sucks less.
@@ -17,6 +19,19 @@ Afterwards enter the following command to build and install st (if
 necessary as root):
 
     make clean install
+
+Reinstallation
+------------
+Edit config.mk to match your local setup (st is installed into
+the /usr/local namespace by default).
+
+Afterwards enter the following command to build and install st (if
+necessary as root):
+
+    make uninstall
+    make clean install
+
+
 
 
 Running st
