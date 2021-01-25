@@ -41,6 +41,7 @@ dist: clean
 	rm -rf st-$(VERSION)
 
 install: st
+	cp config.def.h config.h
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
 	cp -f st $(DESTDIR)$(PREFIX)/bin
 	chmod 755 $(DESTDIR)$(PREFIX)/bin/st
@@ -57,6 +58,7 @@ uninstall:
 .PHONY: all options clean dist install uninstall
 
 run:
+	cp config.def.h config.h
 	make clean
 	make
 	./st
